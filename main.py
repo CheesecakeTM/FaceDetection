@@ -3,6 +3,7 @@ import os, sys
 import cv2
 import numpy as np
 import math
+import dlib
 
 
 
@@ -25,6 +26,8 @@ class FaceRecognition:
     known_face_encodings = []
     known_face_names = []
     process_current_frame = True
+    face_detector = dlib.get_frontal_face_detector()
+    pose_predictor = dlib.shape_predictor("shape_predictor_5_face_landmarks.dat")
 
     def __init__(self):
         self.encode_faces()
@@ -50,13 +53,27 @@ class FaceRecognition:
 
         while True:
             ret, frame = video_capture.read()
+            if not ret:
+                break
 
             if self.process_current_frame:
                 small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
                 rgb_small_frame = small_frame[:, :, ::-1]
 
-                self.face_locations = face_recognition.face_locations(rgb_small_frame)
-                self.face_encodings = face_recognition.face_encodings(rgb_small_frame, self.face_locations)
+                dets = self.face_detector(rgb_small_frame, 1)
+
+                self.face_locations = []
+                self.face_encodings = []
+
+                for d in dets:
+                    top = d.top()
+                    right = d.right()
+                    bottom = d.bottom()
+                    left = d.left()
+                    self.face_locations.append((top, right, bottom, left))
+                    shape =  self.pose_predictor(rgb_small_frame, d)
+                    face_encoding = face_recognition.face_encodings(rgb_small_frame, [(top, right, bottom, left)])[0]
+                    self.face_encodings.append(face_encoding)
 
                 self.face_names = []
                 for face_encoding in self.face_encodings:
