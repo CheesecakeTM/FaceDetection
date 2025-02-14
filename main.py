@@ -36,10 +36,20 @@ class FaceRecognition:
     def encode_faces(self):
         for image in os.listdir('faces'):
             face_image = face_recognition.load_image_file(f'faces/{image}')
-            face_encoding = face_recognition.face_encodings(face_image)[0]
 
-            self.known_face_encodings.append(face_encoding)
-            self.known_face_names.append(image)
+            dets = self.face_detector(face_image, 1)
+            if dets:
+                for d in dets:
+                    face_rectangle = dlib.rectangle(d.left(), d.top(), d.right(), d.bottom())
+                    try:
+                        face_encoding = face_recognition.face_encodings(face_image, [face_rectangle])[0]
+                        self.known_face_encodings.append(face_encoding)
+                        self.known_face_names.append(image)
+                    except Exception as e:
+                        print(f"Error encoding face in {image}: {e}")
+            else:
+                print(f'No face detected in {image}. Skipping.')
+
 
         print(self.known_face_names)
 
@@ -70,9 +80,12 @@ class FaceRecognition:
                     right = d.right()
                     bottom = d.bottom()
                     left = d.left()
+
                     self.face_locations.append((top, right, bottom, left))
-                    shape =  self.pose_predictor(rgb_small_frame, d)
-                    face_encoding = face_recognition.face_encodings(rgb_small_frame, [(top, right, bottom, left)])[0]
+
+                    face_rectangle = dlib.rectangle(left, top, right, bottom)
+
+                    face_encoding = face_recognition.face_encodings(rgb_small_frame, [face_rectangle])[0]
                     self.face_encodings.append(face_encoding)
 
                 self.face_names = []
